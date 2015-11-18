@@ -1,0 +1,45 @@
+COPY Start 1000
+first Stl retadr
+cloop Jsub rdrec
+- Lda length
+- Comp zero
+- Jeq endfill
+ Jsub wrrec
+ j cloop
+endfill Lda eof
+ Sta buffer
+ Lda three
+ Sta length
+ Jsub wrrec
+ Ldl retadr
+ Rsub
+eof Byte c'EOF'
+three Word 3
+zero Word 0
+retadr Resw 1
+length Resw 1
+buffer Resw 4096
+rdrec Ldx zero
+ Lda zero
+rloop Td input
+ Jeq rloop
+ Rd input
+ Comp zero
+ Jeq exit
+ Stch buffer,x
+ Tix maxlen
+ Jlt rloop
+exit Stx length
+ Rsub
+input Byte x'F1'
+maxlen Word 4096
+wrrec Ldx zero
+wloop Td output
+ Jeq wloop
+ Ldch buffer,x
+ Wd output
+ Tix length
+ Jlt wloop
+ Rsub
+output Byte x'05'
+ End first

@@ -1,14 +1,24 @@
 #include<stdio.h>
 #include<conio.h>
-struct mneumonics
+#include<string.h>
+#include<math.h>
+#include<malloc.h>
+struct operationCode
 {
 char *mnemonic;
 char *opcode;
 };
-int main()
+struct symbolTable
 {
-int i;
-struct mneumonics optab[100];
+    char symbol[6];
+    int address;
+    struct symbolTable *next;
+} ;
+struct operationCode optab[60];
+
+struct symbolTable *symtab;
+void insert_optab()
+{
 optab[1].mnemonic="Add";optab[1].opcode="18";
 optab[2].mnemonic="Addf";optab[2].opcode="58";
 optab[3].mnemonic="Addr";optab[3].opcode="90";
@@ -68,10 +78,193 @@ optab[56].mnemonic="Tio";optab[56].opcode="F8";
 optab[57].mnemonic="Tix";optab[57].opcode="2C";
 optab[58].mnemonic="Tixr";optab[58].opcode="B8";
 optab[59].mnemonic="Wd";optab[59].opcode="DC";
+}
 
+
+//---------------------
+void c_to_hexa(int x,char arr[5])// convert decimal to hexa
+{
+    int i=0,y;
+  while(x>=0)
+  {
+     y=x%16;
+    switch(y)
+    { case '10' :arr[i]='A';
+				  break;
+	case '11' :arr[i]='B';
+				  break;
+	case '12' :arr[i]='C';
+				  break;
+	 case '13' :arr[i]='D';
+				  break;
+	 case '14' :arr[i]='E';
+				  break;
+	 case '15' :arr[i]='F';
+				 break;
+	default :arr[i]=y;
+	}
+  i++;x=x/16;
+   printf("hello");
+ }
+}
+
+long int c_to_decimal(char *arr)// convert hexa to decimal
+{
+    int i=5,y;
+    long int sum=0;
+while(i>=0)
+  {switch(arr[i])
+	 {   case 'A'  :y=10;
+					sum=sum+y*pow(16,i);
+					break;
+		  case 'B' :y=11;
+					sum=sum+y*pow(16,i);
+					break;
+		  case 'C' :y=12;
+					sum=sum+y*pow(16,i);
+					break;
+		  case 'D' :y=13;
+					sum=sum+y*pow(16,i);
+					break;
+		  case 'E' :y=14;
+					sum=sum+y*pow(16,i);
+					break;
+		  case 'F' :y=15;
+					sum=sum+y*pow(16,i);
+					break;
+		  default :y=(int)(arr[i])-(int)(0);
+							sum=sum+y*pow(16,i);
+	  }
+	i--;
+  }
+return sum;
+}
+
+
+int search_opcode(char s[5])//search for operation code
+{
+    int k;
+    for(k=0;k<60;k++)
+    {
+     if(strcmp(optab[k].opcode,s)==0)
+	  return k;
+    }
+ return -1;
+}
+
+
+int stringlen(char  s[20])
+{int j=2,len=0;
+while((int)(s[j])!= 27)   //	ASCII Code for '
+	{ len++;
+	  j++;
+	 }
+if((int )(s[0])==58)		//ASCII Code for X
+  return (len/2);
+else
+ return len;
+ }
+
+int search_symtab(char L[6],int loc)//search for symbol and insert it if it is not found(pass1)
+ {
+     int k;
+     char s[5];
+     struct symbolTable *ptr=symtab;
+     while(ptr!=NULL)
+	 {
+		if(strcmp(ptr->symbol,L)==0)
+		return 0;
+		ptr=ptr->next;
+     }
+    // printf("hello");
+     ptr=(struct symbolTable*)malloc(sizeof(struct symbolTable));
+     printf("hello");
+    c_to_hexa(loc,s);
+     printf("hello");
+    strcpy(ptr->symbol,L);
+    strcpy(ptr->address,s);
+    ptr->next=NULL;
+    symtab->next=ptr;
+    return 1;
+ }
+int main()
+{
+int i,k,locctr,startingAddress,programLength;
+int r;
+char line[100],opcode[5],label[6],operand[20],programName[20];
+
+FILE *input,*intermediate,*output;
+input=fopen("INPUT.dat","r");
+intermediate=fopen("intermediate.dat","w");
+insert_optab();
 printf("\nmnemonics \t opcode ");
 for(i=1;i<60;i++)
 printf("\n %s \t %s",optab[i].mnemonic,optab[i].opcode);
 
+
+//WORKING OF PASS1
+fscanf(input,"%s %s %s",&label,&opcode,&operand);
+printf("\n%s %s %s",label,opcode,operand);
+if (strcmp(opcode,"Start")==0)
+{
+strcpy(programName,label);
+r=c_to_decimal(operand);
+printf("\n %d",r);
+startingAddress=locctr=r;
+//printf("\n %s %s",locctr,startingAddress);
+fprintf(intermediate,"- %s %s %s",programName,opcode,operand);
+fscanf(input,"%s %s %s",&label,&opcode,&operand);
+printf("\n%s %s %s",label,opcode,operand);
+}//end if start
+else
+locctr="0";
+
+while(strcmp(opcode,"End")!=0)
+{
+    //printf("helo");
+    if(strcmp(label,"-")!=0)
+    {
+     r=search_symtab(label,locctr);
+     if(r==0)
+     {
+        printf("\nDUPLICATE SYMBOL");
+        exit(1);
+     }
+    }
+    r=search_opcode(opcode);
+    if(r>=0)
+        locctr=locctr+3;
+    else if(strcmp(opcode,"Word")==0)
+     locctr+=3;
+    else if(strcmp(opcode,"RESW")==0)
+	    locctr+=3*atoi(operand);
+    else if(strcmp(opcode,"RESB")==0)
+        locctr+=atoi(operand);
+    else if(strcmp(opcode,"BYTE")==0)
+        locctr+=stringlen(operand);
+    else
+        printf("\nOPCODE NOT FOUND\n");
+        exit(1);
+
+fprintf(intermediate,"%d %s %s %s",locctr,label,opcode,operand);
+fscanf(input,"%s %s %s",&label,&opcode,&operand);
+printf("\n%s %s %s",label,opcode,operand);
+}
+fprintf(intermediate,"- - %s %s",opcode,operand);
+programLength=locctr-startingAddress;
+fclose(intermediate);
+fclose(input);
+//working of pass2
+
 return 0;
+}
+
+
+void PASS2()
+{
+FILE *intermediate,*output;
+intermediate=fopen("intermediate.dat","r");
+output=fopen("OUTPUT.dat","w");
+
+
 }
